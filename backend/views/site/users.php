@@ -12,30 +12,6 @@ $this->title = 'Users';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <head>
-    <style>
-        .mobillock2{
-            display: none;
-        }
-        @media screen and (max-width: 990px){
-            input{
-                width: 90px;
-            }
-        }
-        @media screen and (max-width: 699px){
-            input{
-                width: 70px;
-            }
-        }
-        @media screen and (max-width: 599px){
-            .mobillock1{
-                display: none;
-            }
-            .mobillock2{
-                display: block;
-            }
-        }
-
-    </style>
 </head>
 <body>
 <h1>Users</h1>
@@ -96,8 +72,5 @@ $this->params['breadcrumbs'][] = $this->title;
         ]
 ]); ?>
 
-</div>
-<div class="mobillock2">
-    You can't view this admin page on a mobile device with this little resolution, please use a computer or a device with big enough screen!
 </div>
 </body>

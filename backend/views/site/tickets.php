@@ -32,17 +32,6 @@ $this->params['breadcrumbs'][] = $this->title;
         #open1 {
             background-color: #FFDDDD;
         }
-        .mobillock2{
-            display: none;
-        }
-        @media screen and (max-width: 500px){
-            .mobillock1{
-                display: none;
-            }
-            .mobillock2{
-                display: block;
-            }
-        }
     </style>
 </head>
 <body>
@@ -102,8 +91,5 @@ $this->params['breadcrumbs'][] = $this->title;
     ],
 ]); ?>
 
-</div>
-<div class="mobillock2">
-    You can't view this admin page on a mobile device with this little resolution, please use a computer or a device with big enough screen!
 </div>
 </body>
