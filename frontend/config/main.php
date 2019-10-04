@@ -36,14 +36,15 @@ return [
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        /*
-        'urlManager' => [
-            'enablePrettyUrl' => true,
-            'showScriptName' => false,
-            'rules' => [
-            ],
+        'formatter' => [
+            'class' => 'yii\i18n\Formatter',
+            'datetimeFormat' => 'Y MMMM d - HH:mm:ss',
+            'timeZone' => 'Europe/Budapest',
         ],
-        */
+
+        'urlManager' => require 'urlManager.php',
+
+
     ],
     'params' => $params,
 ];

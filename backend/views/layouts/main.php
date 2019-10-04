@@ -9,6 +9,7 @@ use yii\bootstrap\Nav;
 use yii\bootstrap\NavBar;
 use yii\widgets\Breadcrumbs;
 use common\widgets\Alert;
+use common\models\User;
 
 AppAsset::register($this);
 ?>
@@ -41,6 +42,10 @@ AppAsset::register($this);
     if (Yii::$app->user->isGuest) {
         $menuItems[] = ['label' => 'Login', 'url' => ['/site/login']];
     } else {
+        if(USER::findIdentity(Yii::$app->user->getId())->admin) {
+            $menuItems[] = ['label' => 'List tickets', 'url' => ['/site/tickets']];
+            $menuItems[] = ['label' => 'List users', 'url' => ['/site/users']];
+        }
         $menuItems[] = '<li>'
             . Html::beginForm(['/site/logout'], 'post')
             . Html::submitButton(

@@ -1,6 +1,9 @@
 <?php
 namespace frontend\controllers;
 
+use common\models\Comment;
+use common\models\User;
+use frontend\models\CreateTicketForm;
 use frontend\models\ResendVerificationEmailForm;
 use frontend\models\VerifyEmailForm;
 use Yii;
@@ -14,6 +17,10 @@ use frontend\models\PasswordResetRequestForm;
 use frontend\models\ResetPasswordForm;
 use frontend\models\SignupForm;
 use frontend\models\ContactForm;
+use frontend\models\EditProfileForm;
+use frontend\models\ViewTicket;
+use common\models\ViewProfile;
+use yii\web\UploadedFile;
 
 /**
  * Site controller
@@ -28,7 +35,7 @@ class SiteController extends Controller
         return [
             'access' => [
                 'class' => AccessControl::className(),
-                'only' => ['logout', 'signup'],
+                'only' => ['logout', 'signup','edit-profile', 'assign-admin', 'view-profile'],
                 'rules' => [
                     [
                         'actions' => ['signup'],
@@ -36,7 +43,7 @@ class SiteController extends Controller
                         'roles' => ['?'],
                     ],
                     [
-                        'actions' => ['logout'],
+                        'actions' => ['logout', 'edit-profile', 'assign-admin', 'view-profile'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -136,6 +143,33 @@ class SiteController extends Controller
     }
 
     /**
+     * Displays ticket creation page and creates a ticket
+     *
+     * @return string|\yii\web\Response
+     * @throws \yii\base\Exception
+     * @throws \yii\db\Exception
+     */
+    public function actionCreateTicket()
+    {
+        $model = new CreateTicketForm();
+        if ($model->load(Yii::$app->request->post())) {
+            $model->imageFiles = UploadedFile::getInstances($model, 'imageFiles');
+            if ($model->createTicket()) {
+                Yii::$app->session->setFlash('success', 'Ticket successfully created.');
+            } else {
+                Yii::error("Can\'t create ticket-", __METHOD__);
+                Yii::$app->session->setFlash('error', 'There was an error creating your ticket.');
+            }
+            return $this->goHome();
+
+        } else {
+            return $this->render('createTicket', [
+                'model' => $model
+            ]);
+        }
+    }
+
+    /**
      * Displays about page.
      *
      * @return mixed
@@ -174,7 +208,6 @@ class SiteController extends Controller
         if ($model->load(Yii::$app->request->post()) && $model->validate()) {
             if ($model->sendEmail()) {
                 Yii::$app->session->setFlash('success', 'Check your email for further instructions.');
-
                 return $this->goHome();
             } else {
                 Yii::$app->session->setFlash('error', 'Sorry, we are unable to reset password for the provided email address.');
@@ -257,4 +290,187 @@ class SiteController extends Controller
             'model' => $model
         ]);
     }
+
+    /**
+     * Displays edit profile page and changes the data if possible
+     *
+     * @return string|\yii\web\Response
+     */
+    public function actionEditProfile()
+    {
+        $model = new EditProfileForm();
+        $model->getData(Yii::$app->user->id);
+        if ($model->load(Yii::$app->request->post()) && $model->validate()) {
+            if ($model->edit()) {
+                Yii::$app->session->setFlash('success', 'Your profile has successfully changed.');
+            } else {
+                Yii::$app->session->setFlash('error', 'Sorry, we are unable to edit your profile.');
+            }
+
+            return $this->refresh();
+        }
+        return $this->render('editProfile', [
+            'model' => $model
+        ]);
+    }
+
+    /**
+     * Sends a password reset email to the current logged in user
+     *
+     * @return \yii\web\Response
+     */
+    public function actionSendPasswordEmail()
+    {
+        $model = new PasswordResetRequestForm();
+        $model->email = User::findIdentity(Yii::$app->user->getId())->email;
+        if ($model->sendEmail()) {
+            Yii::$app->session->setFlash('success', 'Check your email for further instructions.');
+        } else {
+            Yii::$app->session->setFlash('error', 'Sorry, we are unable to resend verification email.');
+        }
+        return $this->goHome();
+    }
+
+    /**
+     * Creates a new comment
+     *
+     * @return \yii\web\Response
+     */
+    public function actionNewComment()
+    {
+        $model = new ViewTicket();
+        if (Yii::$app->request->post() && $model->load(Yii::$app->request->post()) && isset($_POST['id']) && isset($_POST['sid'])) {
+
+            if ($model->addComment($_POST['sid'], $_POST['id'], Yii::$app->user->getId())) {
+                Yii::$app->session->setFlash('success', 'Comment added.');
+                return $this->redirect("view-ticket?id=".$_POST['id']);
+            } else {
+                Yii::error("Failed to add comment- ". $_POST['id'], __METHOD__);
+                Yii::$app->session->setFlash('error', 'Can\'t add comment.');
+            }
+
+            return $this->goHome();
+        }
+    }
+
+    /**
+     * Displays a given ticket's page
+     *
+     * @param int $i
+     * @return string|\yii\web\Response
+     */
+    public function actionViewTicket($i = 0)
+    {
+        $model = new ViewTicket();
+        if (Yii::$app->request->get() && isset($_GET['id'])) {
+            $i = $_GET['id'];
+        }
+        if ($model->setData($i)) {
+            return $this->render('viewTicket', [
+                'model' => $model
+            ]);
+        }
+        Yii::$app->session->setFlash('error', 'There\'s no ticket with the given id.');
+        return $this->goHome();
+
+    }
+
+    /**
+     * Displays the current user's or the user with the given username's profile if authorized
+     *
+     * @return string|\yii\web\Response
+     */
+    public function actionViewProfile()
+    {
+        $model = new ViewProfile();
+            if (!Yii::$app->user->isGuest && Yii::$app->request->get() && isset($_GET['uname'])) {
+                if ($model->getData($_GET['uname'])) {
+                    if ($_GET['uname'] == User::findOne(Yii::$app->user->id)->username || User::findOne(Yii::$app->user->id)->admin) {
+                        return $this->render('viewProfile', [
+                            'model' => $model
+                        ]);
+                    } else {
+                        Yii::$app->session->setFlash('error', 'You are not authorized to view this.');
+                        return $this->goHome();
+                    }
+                } else if (User::findOne(Yii::$app->user->id)->admin) {
+                    Yii::$app->session->setFlash('error', 'No user with ' . $_GET['uname'] . ' username.');
+                    return $this->goHome();
+                } else {
+                    Yii::$app->session->setFlash('error', 'You are not authorized to view this.');
+                    return $this->goHome();
+                }
+            }
+        Yii::$app->session->setFlash('error', 'You are not authorized to view this.');
+        return $this->goHome();
+    }
+
+    /**
+     * Assign the current logged in admin to the ticket
+     *
+     * @return string|\yii\web\Response
+     * @throws \yii\db\Exception
+     */
+    public function actionAssignAdmin()
+    {
+        if (Yii::$app->request->get() && isset($_GET['id'])) {
+            if (!Yii::$app->user->isGuest && User::findOne(Yii::$app->user->id)->admin) {
+                if (ViewTicket::setAdmin($_GET['id'], Yii::$app->user->id)) {
+                    Yii::$app->session->setFlash('success', 'You have successfully assigned yourself to this ticket.');
+                    return $this->actionViewTicket($_GET['id']);
+                } else {
+                    Yii::$app->session->setFlash('error', 'There was a problem assigning yourself to this ticket.');
+                    Yii::error("Failed to assign admin to ticket-".$_GET['id'], __METHOD__);
+                }
+            } else {
+                return $this->goHome();
+            }
+        }
+        return $this->goHome();
+    }
+
+    /**
+     * Change the ticket's status
+     *
+     * @return \yii\web\Response
+     */
+    public function actionChangeTicket()
+    {
+        if (Yii::$app->request->get() && isset($_GET['tid'])) {
+            if (isset ($_GET['st']) && ViewTicket::changeTicket($_GET['tid'], $_GET['st'])) {
+                $status = $_GET['st'] == 1 ? 'open' : 'closed';
+                Yii::$app->session->setFlash('success', 'You have successfully '.$status.' this ticket.');
+            } else {
+                Yii::$app->session->setFlash('error', 'There was a problem changing the ticket status.');
+                Yii::error("Failed to change ticket-".$_GET['tid'], __METHOD__);
+            }
+            return $this->redirect("view-ticket?id=".$_GET['tid']);
+        }
+        return $this->goHome();
+    }
+
+    /**
+     * Deletes a comment
+     *
+     * @return \yii\web\Response
+     */
+    public function actionDeleteComment()
+    {
+        if (isset($_GET['cid']) && !Yii::$app->user->isGuest) {
+            $comment = Comment::findOne($_GET['cid']);
+            if ($comment != null) {
+                if (Yii::$app->user->id == $comment->author_id || User::findOne(Yii::$app->user->id)->admin) {
+                    if ($comment->delete()) {
+                        Yii::$app->session->setFlash('success', 'You have successfully deleted the comment.');
+                    } else {
+                        Yii::error("Failed to delete comment- ". $comment->id, __METHOD__);
+                        Yii::$app->session->setFlash('error', 'There was a problem deleting the comment.');
+                    }
+                    return $this->redirect("view-ticket?id=".$_GET['tid']);
+                }
+            }
+        }
+        return $this->goHome();
+    }
+
 }

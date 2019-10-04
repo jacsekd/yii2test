@@ -37,14 +37,24 @@ return [
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        /*
+        'formatter' => [
+            'class' => 'yii\i18n\Formatter',
+            'datetimeFormat' => 'Y MMMM d - HH:mm:ss',
+            'timeZone' => 'Europe/Budapest',
+        ],
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
+            'enableStrictParsing' => false,
             'rules' => [
+                '/' => 'site/index',
+                '<controller:[\w-]+>' => '<controller>/index',
+                '<controller:[\w-]+>/<id:\d+>' => '<controller>/view',
+                '<controller:[\w-]+>/<action:[\w-]+>/<id:\d+>' => '<controller>/<action>',
+                '<controller:[\w-]+>/<action:[\w-]+>' => '<controller>/<action>',
             ],
         ],
-        */
+        'frontendUrlManager' => require __DIR__ . '/../../frontend/config/urlManager.php',
     ],
     'params' => $params,
 ];

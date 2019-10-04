@@ -13,7 +13,7 @@ info "Provision-script user: `whoami`"
 export DEBIAN_FRONTEND=noninteractive
 
 info "Configure timezone"
-timedatectl set-timezone ${timezone} --no-ask-password
+timedatectl set-timezone ${timezone}
 
 info "Prepare root password for MySQL"
 debconf-set-selections <<< "mysql-community-server mysql-community-server/root-pass password \"''\""
@@ -25,10 +25,10 @@ apt-get update
 apt-get upgrade -y
 
 info "Install additional software"
-apt-get install -y php7.0-curl php7.0-cli php7.0-intl php7.0-mysqlnd php7.0-gd php7.0-fpm php7.0-mbstring php7.0-xml unzip nginx mysql-server-5.7 php.xdebug
+apt-get install -y php php7.2-cli php7.2-intl php7.2-mysqlnd php7.2-gd php7.2-fpm php7.2-mbstring php7.2-xml unzip nginx mariadb-server php.xdebug
 
 info "Configure MySQL"
-sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mysql.conf.d/mysqld.cnf
+sed -i "s/.*bind-address.*/bind-address = 0.0.0.0/" /etc/mysql/mariadb.conf.d/50-server.cnf
 mysql -uroot <<< "CREATE USER 'root'@'%' IDENTIFIED BY ''"
 mysql -uroot <<< "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%'"
 mysql -uroot <<< "DROP USER 'root'@'localhost'"
@@ -36,10 +36,10 @@ mysql -uroot <<< "FLUSH PRIVILEGES"
 echo "Done!"
 
 info "Configure PHP-FPM"
-sed -i 's/user = www-data/user = vagrant/g' /etc/php/7.0/fpm/pool.d/www.conf
-sed -i 's/group = www-data/group = vagrant/g' /etc/php/7.0/fpm/pool.d/www.conf
-sed -i 's/owner = www-data/owner = vagrant/g' /etc/php/7.0/fpm/pool.d/www.conf
-cat << EOF > /etc/php/7.0/mods-available/xdebug.ini
+sed -i 's/user = www-data/user = vagrant/g' /etc/php/7.2/fpm/pool.d/www.conf
+sed -i 's/group = www-data/group = vagrant/g' /etc/php/7.2/fpm/pool.d/www.conf
+sed -i 's/owner = www-data/owner = vagrant/g' /etc/php/7.2/fpm/pool.d/www.conf
+cat << EOF > /etc/php/7.2/mods-available/xdebug.ini
 zend_extension=xdebug.so
 xdebug.remote_enable=1
 xdebug.remote_connect_back=1

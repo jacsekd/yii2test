@@ -20,6 +20,8 @@ use yii\web\IdentityInterface;
  * @property integer $status
  * @property integer $created_at
  * @property integer $updated_at
+ * @property integer $last_login
+ * @property boolean $admin
  * @property string $password write-only password
  */
 class User extends ActiveRecord implements IdentityInterface
@@ -57,6 +59,12 @@ class User extends ActiveRecord implements IdentityInterface
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE, self::STATUS_DELETED]],
         ];
     }
+    public function attributeLabels()
+    {
+        return [
+            'email' => "E-mail"
+        ];
+    }
 
     /**
      * {@inheritdoc}
@@ -85,6 +93,17 @@ class User extends ActiveRecord implements IdentityInterface
         return static::findOne(['username' => $username, 'status' => self::STATUS_ACTIVE]);
     }
 
+    public static function ofUsername($username)
+    {
+        return static::find()
+            ->andWhere(['or',
+                ['status' => User::STATUS_ACTIVE],
+                ['status' => User::STATUS_INACTIVE]
+                ])
+            ->andWhere(['username' => $username])
+            ->one();
+    }
+
     /**
      * Finds user by password reset token
      *
@@ -109,7 +128,8 @@ class User extends ActiveRecord implements IdentityInterface
      * @param string $token verify email token
      * @return static|null
      */
-    public static function findByVerificationToken($token) {
+    public static function findByVerificationToken($token)
+    {
         return static::findOne([
             'verification_token' => $token,
             'status' => self::STATUS_INACTIVE
@@ -140,6 +160,7 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return $this->getPrimaryKey();
     }
+
 
     /**
      * {@inheritdoc}
@@ -206,4 +227,20 @@ class User extends ActiveRecord implements IdentityInterface
     {
         $this->password_reset_token = null;
     }
+
+    /**
+     * Deletes(sets the status to 0) on a user with the given id
+     *
+     * @param integer $id The user's id who will be deleted
+     * @return bool
+     */
+    public static function deleteUser($id)
+    {
+        $user = User::findOne($id);
+        $user->status = USER::STATUS_DELETED;
+        $user->admin = 0;
+        $user->save();
+        return true;
+    }
+
 }
